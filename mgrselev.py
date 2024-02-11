@@ -46,7 +46,6 @@ class MGRSElev():
         logger.debug("in doit")
         # Pull out the 'dictionary' from the mizfile
         my_dict = self.ml.extract_filedict_from_miz('l10n/DEFAULT/dictionary')
-        #print(my_dict['dictionary']["DictKey_622"])
         # Parse the dictionary for MGRS coordinates - ones that arent already with elevations
         # Get the elevation for each MGRS coordinate, checking cache
         for key in my_dict:
@@ -91,15 +90,10 @@ class MGRSElev():
 
                     print(my_dict[key])
 
-            #coord_key = coord[1].replace(' ','')
-            #if self.db_handle[coord_key] != None:
-
         # Write the dictionary back to the miz file
         self.ml.inject_filedict_into_miz(self.ml.miz_file,'l10n/DEFAULT/dictionary', my_dict)
 
  
-
-
     def get_elev_lat_lon(self,lat,lon):
         # Use an API to get the elevation of a lat/lon
         url = f'https://api.open-elevation.com/api/v1/lookup?locations={lat},{lon}'
@@ -125,33 +119,11 @@ class MGRSElev():
         print(f"Setting {key} to {value}")
         self.db_handle[key] = str(value)
 
-#set_key(test_string,get_elev_lat_lon(d[0],d[1]))
-#print(get_key(test_string))
 
-
-
-
-#print(r.json()['results'][0]['elevation'])
-
-
-# remove all whitespace in test_string
-#test_string = ''.join(test_string.split())
-
-#d = m.toLatLon(test_string)
-#print(d)
-
-
-
-# >>> c = m.toMGRS(latitude, longitude)
-# Make a http get request
-        
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('filename')
-    #parser.add_argument('release')
-    #parser.add_argument('--outdir', '-o', type=str, default='.', help='Output file path (default: current directory)')
-
     parser.add_argument('--debug', '-d', action='store_true', help='Enable debug logging')
 
     args = parser.parse_args()
@@ -162,6 +134,5 @@ if __name__ == '__main__':
         logger.setLevel(logging.DEBUG)
 
     mg = MGRSElev(args.filename, logger)
-    #miz = Mizlib(args.filename,args.release,logger)
 
-    mg.doit() #args.outdir)
+    mg.doit()
