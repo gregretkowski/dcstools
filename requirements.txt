@@ -3,3 +3,7 @@ pyyaml
 # pydcs @ https://github.com/gregretkowski/pydcs.git
 slpp
 mgrs
+requests
+shapely
+pydcs
+pyproj
