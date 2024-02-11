@@ -1,0 +1,5 @@
+pyyaml
+# pydcs
+# pydcs @ https://github.com/gregretkowski/pydcs.git
+slpp
+mgrs
