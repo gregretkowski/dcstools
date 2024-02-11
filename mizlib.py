@@ -87,9 +87,19 @@ class Mizlib():
 
     def extract_filedict_from_miz(self, filename):
         file_string = self.extract_filestring_from_miz(filename)
+        base_obj = os.path.basename(filename)
         # Manipulate the strings
         dictionary = lua.decode("{" + file_string + "}")
-        return dictionary
+        return dictionary[base_obj]
+    
+    def inject_filedict_into_miz(self, miz_filename, filename, dictionary):
+        base_obj = os.path.basename(filename)
+        self.remove_from_zip(miz_filename, filename)
+        with ZipFile(miz_filename, 'a') as myzip:
+            dictionary_string = f"{base_obj} = " + lua.encode(dictionary)
+            myzip.writestr(filename,dictionary_string)
+                #mission_string = "mission = " + lua.encode(mission['mission'])
+                #myzip.writestr('mission',mission_string)
 
 
     def extract_filestring_from_miz(self, filename):

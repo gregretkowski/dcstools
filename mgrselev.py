@@ -32,30 +32,38 @@ class MGRSElev():
         self.ml = Mizlib(mizfile,'',logger)
         self.logger = self.ml.logger
         if cachedb:
-            self.db_handle = dbm.open(cachedb, 'c')
+            self.dbm_filename = cachedb
         else:
-            self.db_handle = dbm.open('mgrs_cache.db', 'c')
+            self.dbm_filename = 'mgrs_cache.db'
+        self.db_handle = dbm.open(self.dbm_filename, 'c')
 
+    def dbm_flush(self):
+        self.db_handle.close()
+        self.db_handle = dbm.open('mgrs_cache.db', 'c')
 
     def doit(self):
+        mgrs_pattern = re.compile(r'(.*)(\d{2}[A-Z]\s[A-Z]{2}\s\d+\s\d+)(.*)')
         logger.debug("in doit")
         # Pull out the 'dictionary' from the mizfile
         my_dict = self.ml.extract_filedict_from_miz('l10n/DEFAULT/dictionary')
         #print(my_dict['dictionary']["DictKey_622"])
-        for key in my_dict['dictionary']:
-            if '37T' in my_dict['dictionary'][key]:
-                print(key,my_dict['dictionary'][key])
-                mgrs_pattern = re.compile(r'\b\d+[A-Z]\s[A-Z]{2}\s\d+\s\d+\b')
-                if mgrs_pattern.match(my_dict['dictionary'][key]):
+        # Parse the dictionary for MGRS coordinates - ones that arent already with elevations
+        # Get the elevation for each MGRS coordinate, checking cache
+        for key in my_dict:
+            if '37T' in my_dict[key] or '38T' in my_dict[key]:
+            #if True:
+                print(key,my_dict[key])
+                
+                if mgrs_pattern.match(my_dict[key]):
                     print("Matched")
-                    mgrs_coords = mgrs_pattern.findall(my_dict['dictionary'][key])
+                    mgrs_coords = mgrs_pattern.findall(my_dict[key])
                     print(mgrs_coords)
                     for coord in mgrs_coords:
                         print(coord)
-                        coord_key = coord.replace(' ','')
+                        coord_key = coord[1].replace(' ','')
                         lat,lon = self.mgrs.toLatLon(coord_key)
                         print(lat,lon)
-                        if self.get_key(coord_key):
+                        if self.get_key(coord_key) != None:
                             print("Already have elevation")
                             continue
                         else:
@@ -64,11 +72,32 @@ class MGRSElev():
                             self.set_key(coord_key,elev)
                         print(self.get_key(coord_key))
                 # break
+        self.dbm_flush()
         print(my_dict.keys())
-        # Parse the dictionary for MGRS coordinates - ones that arent already with elevations
-        # Get the elevation for each MGRS coordinate, checking cache
-        # re-inect dictionary back into mizfile
-        pass
+        print(len(self.db_handle.keys()))
+        print(self.db_handle.keys())
+
+        # Now go key-by-key, match for key but not elevation string. replace value.
+        for key in my_dict:
+            mgrs_coords = mgrs_pattern.findall(my_dict[key])
+            for coord in mgrs_coords:
+                coord = coord[1]
+                print(coord)
+                coord_key = coord.replace(' ','')
+                # if the string is there but '- \dft' is not, add it
+                if not re.search(r'{coord} - \d+ft',my_dict[key]):
+                    print(f"Adding elevation to {coord}")
+                    my_dict[key] = my_dict[key].replace(coord, f"{coord} - {self.get_key(coord_key)}ft")
+
+                    print(my_dict[key])
+
+            #coord_key = coord[1].replace(' ','')
+            #if self.db_handle[coord_key] != None:
+
+        # Write the dictionary back to the miz file
+        self.ml.inject_filedict_into_miz(self.ml.miz_file,'l10n/DEFAULT/dictionary', my_dict)
+
+ 
 
 
     def get_elev_lat_lon(self,lat,lon):
