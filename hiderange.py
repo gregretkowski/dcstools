@@ -82,6 +82,7 @@ class HideRange():
         for range, v in self.config['ranges'].items():
             self.logger.debug(range)
             my_polygon = self.get_polygon(v['prefix'],v['polygon'])
+            #spawnrange_name = f"!?Ground Ranges?*{range}*!"
             spawnrange_name = f"!*{range}*!"
             self.logger.debug(my_polygon)
 
@@ -143,7 +144,7 @@ class HideRange():
         # read a config file
         #pass
             
-        #self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
+        self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
 
     def unhide(self):
         # read config, find all 'keys' find any ground unit with name of key,

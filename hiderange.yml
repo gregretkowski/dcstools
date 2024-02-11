@@ -5,8 +5,12 @@ ranges:
   "Leach Lake":
     prefix: 11S
     polygon:
-      - MV9757
-      - NV4857
-      - NV0025
-      - NV4623
+      - NV05
+      - NV55
+      - NV51
+      - NV01
+      #- MV9757
+      #- NV4857
+      #- NV0025
+      #- NV4623
 
