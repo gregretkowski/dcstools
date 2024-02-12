@@ -44,7 +44,10 @@ class HideRange():
 
         #terrain = Terrain(self.config['terrain'])
         # FIXME -- this is hardcoded for Nevada
-        terrain = Nevada()
+        if self.config['terrain'] == 'NTTR':
+            terrain = Nevada()
+        else:
+            raise Exception("Unsupported terrain.. you need to add it")
         mp = mapping.Point(0,0,terrain)
         ll = mapping.LatLng(36,-115)
         mp = mp.from_latlng(ll,terrain)
@@ -76,7 +79,9 @@ class HideRange():
         for range, v in self.config['ranges'].items():
             self.logger.debug(range)
             my_polygon = self.get_polygon(self.config['prefix'],v['polygon'])
-            spawnrange_name = f"!*{range}*!"
+            spawnrange_name = f"!*{range}*! "
+            # Nested ranges arent working.
+            #spawnrange_name = f"!?GroundRanges?*{range}*! "
             self.logger.debug(my_polygon)
             ranges[spawnrange_name] = my_polygon
 
@@ -98,7 +103,9 @@ class HideRange():
                         # 2. Group is not late_activation
                         # 3. Group is within polygon
                         for spawnrange_name, my_polygon in ranges.items():
-                            if my_polygon.contains(point) and not 'lateActivation' in group and not spawnrange_name in group['name']:
+                            #if my_polygon.contains(point) and not 'lateActivation' in group and not spawnrange_name in group['name']:
+                            # Some stuff was late activation anyway. I dont know why, but I am gonna include them anyway
+                            if my_polygon.contains(point) and not spawnrange_name in group['name']:
                                 #ranges[spawnrange_name] = my_polygon
 
                                 self.logger.debug(f"Applying to {group['name']}")
@@ -137,17 +144,37 @@ class HideRange():
                             group['name'] = group['name'].replace(spawnrange_name,'')
                             del group['lateActivation']
                             logging.info(f"removed {spawnrange_name} from {group['name']}")
-                            
+
         self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
 
+    def deact(self):
 
+        # Remove 'ACTIVE_' from the name of the group, and remove lateActivation.. deals
+        # with the script that auto activates these groups and is no longer needed.
+        my_dict = self.ml.extract_filedict_from_miz('mission')
+
+        for coalition_id, coalition in my_dict['coalition'].items():
+            for country_id, country in coalition['country'].items():
+                if not 'vehicle' in country:
+                    continue
+                for group_id, group in country['vehicle']['group'].items():
+                    if not 'y' in group:
+                        continue
+
+                    if 'ACTIVE_' in group['name']:
+                        group['name'] = group['name'].replace('ACTIVE_','')
+                        del group['lateActivation']
+                        logging.info(f"removed 'ACTIVE_' from {group['name']}")
+
+        self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('action',choices=['hide','unhide'],help='Action to perform')
+    parser.add_argument('action',choices=['hide','unhide','deact'],help='Action to perform')
     parser.add_argument('conffile',help='Configuration file')
     parser.add_argument('filename')
+    parser.add_argument('--include-la', '-a', action='store_true', help='Include already late activated units in the hide action.')
     parser.add_argument('--debug', '-d', action='store_true', help='Enable debug logging')
 
     args = parser.parse_args()
@@ -162,6 +189,8 @@ if __name__ == '__main__':
         hr.hide()
     elif args.action == 'unhide':
         hr.unhide()
+    elif args.action == 'deact':
+        hr.deact()
     else:
         print("Unknown action")
         exit(1)

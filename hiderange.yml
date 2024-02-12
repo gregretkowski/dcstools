@@ -13,7 +13,7 @@ ranges:
   #    - PA2964
   #    - PA2996
   #    - PB2507
-  "Ranges 61-62":
+  "61-62":
     polygon:
       - PB2527
       - PB5027
@@ -25,7 +25,7 @@ ranges:
       - PA2964
       - PA2896
       - PB2507
-  "Range 63":
+  "63-65":
     polygon:
       - PA2964
       - PA3464
@@ -36,13 +36,19 @@ ranges:
       - PA5233
       - PA4433
       - PA2746
-  "Ranges 64-65":
-    polygon:
+      - PA2752
+      - NA9552
       - NA9495
       - PA2895
       - PA2964
-      - PA2752
-      - NA9552
+
+  #"Ranges 64-65":
+  #  polygon:
+  #    - NA9495
+  #    - PA2895
+  #    - PA2964
+  #    - PA2752
+  #    - NA9552
   "Range 66":
   # AKA Leach Lake
     polygon:
