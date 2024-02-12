@@ -48,12 +48,6 @@ class HideRange():
         mp = mapping.Point(0,0,terrain)
         ll = mapping.LatLng(36,-115)
         mp = mp.from_latlng(ll,terrain)
-        #terrain._ll_to_point_transformer(-360507.203125, -75590.070313)
-
-        #lat_lon_to_x_z = Transformer.from_crs(wgs84, crs)
-        #tra = Transformer.from_crs(
-        #    CRS("WGS84"), terrain.projection_parameters.to_crs()
-        #)
 
         self.logger.debug(mp.latlng())
         #raise SystemExit
@@ -72,84 +66,79 @@ class HideRange():
             coord_list.append((mp.x,mp.y))
         return Polygon(coord_list)
 
+
     def hide(self):
-        #my_dict = self.ml.extract_filedict_from_miz('mission')
+
         self.logger.debug("in hide")
         self.logger.debug(self.config)
-        # DEBUG:
-        my_polygon = None
-        spawnrange_name = None
+
+        ranges = {}
         for range, v in self.config['ranges'].items():
             self.logger.debug(range)
-            my_polygon = self.get_polygon(v['prefix'],v['polygon'])
-            #spawnrange_name = f"!?Ground Ranges?*{range}*!"
+            my_polygon = self.get_polygon(self.config['prefix'],v['polygon'])
             spawnrange_name = f"!*{range}*!"
             self.logger.debug(my_polygon)
+            ranges[spawnrange_name] = my_polygon
 
+        # Create a set of polygons to modify stuff.. range_name, polygon.
         
+        # Load mission and iterate over groups.        
         my_dict = self.ml.extract_filedict_from_miz('mission')
-        # Iterate over groups.. Conditions for hiding are:
-        # 1. Group is a ground unit
-        # 2. Group is not late_activation
-        # 3. Group is within polygon
-        self.logger.debug(my_dict.keys())
-        self.logger.debug(my_dict['coalition']['red']['country'][1]['vehicle']['group'][1].keys())
-        with open('miz_dump.json','w') as f:
-            #f.write(json.dumps(my_dict,indent=2))
-            f.write(json.dumps(my_dict['coalition']['red']['country'][1]['vehicle']['group'][1],indent=2))
 
-        # How to get coordinate system??
+        for coalition_id, coalition in my_dict['coalition'].items():
+            for country_id, country in coalition['country'].items():
+                if not 'vehicle' in country:
+                    continue
+                for group_id, group in country['vehicle']['group'].items():
+                    #self.logger.debug(group.keys())
+                    if 'y' in group:
+                        point = Point(group['x'],group['y'])
+                        
+                        # 1. Group is a ground unit
+                        # 2. Group is not late_activation
+                        # 3. Group is within polygon
+                        for spawnrange_name, my_polygon in ranges.items():
+                            if my_polygon.contains(point) and not 'lateActivation' in group and not spawnrange_name in group['name']:
+                                #ranges[spawnrange_name] = my_polygon
 
-        '''
-        stuff we care about
-            "y": -86291.714285714,
-            "x": -348996.85714286,
-            "name": "65-01",
-            "visible": false,
-            "hidden": true,
-            ["lateActivation"] = true, NOTE this key is not present unless explicitly set to true
-        '''
-        
-        for country_id, country in my_dict['coalition']['red']['country'].items():
-            if not 'vehicle' in country:
-                continue
-            for group_id, group in country['vehicle']['group'].items():
-                #self.logger.debug(group.keys())
-                if 'y' in group:
-                    point = Point(group['x'],group['y'])
-                    if my_polygon.contains(point):
-                        self.logger.debug(f"In Poly {group['name']}")
-                        #group['hidden'] = True
-                        #group['visible'] = False
-                        group['lateActivation'] = True
-                        group['name'] = spawnrange_name+group['name']
-                        #self.logger.debug(group)
-                        self.logger.debug(json.dumps(group,indent=2))
-                    else:
-                        #self.logger.debug(f"Not in Poly {group['name']}")
-                        pass
-        #json.dumps(my_dict)
-        #self.logger.debug(json.dumps(my_dict['coalition']['red']['country'].keys(), indent=2)) #['Russia']['category']['Ground Units']['group'])
-
-        # Check if my changes made it in the mission object.
-        with open('miz_dump.json','w') as f:
-            #f.write(json.dumps(my_dict,indent=2))
-            f.write(json.dumps(my_dict,indent=2))
-            #print(polygon.contains(point))
-            #self.logger.debug(self.config['ranges'][key])
-
-                #self.logger.debug(self.get_elev_lat_lon(lat,lon))
-                #self.set_key(coord,0)
-        #lat,lon = self.mgrs.toLatLon(coord_key)
-        # read a config file
-        #pass
+                                self.logger.debug(f"Applying to {group['name']}")
+                                #group['hidden'] = True
+                                #group['visible'] = False
+                                group['lateActivation'] = True
+                                group['name'] = spawnrange_name+group['name']
+                                logging.info(f"added {group['name']}")
+                                #self.logger.debug(group)
+                                self.logger.debug(json.dumps(group,indent=2))
+                            else:
+                                #self.logger.debug(f"Not in Poly {group['name']}")
+                                pass
             
         self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
 
     def unhide(self):
         # read config, find all 'keys' find any ground unit with name of key,
         # remove the key from the name, and set the unit to not be late activated.
-        pass
+        ranges = {}
+        for range, v in self.config['ranges'].items():
+            spawnrange_name = f"!*{range}*!"
+            ranges[spawnrange_name] = ""
+
+        my_dict = self.ml.extract_filedict_from_miz('mission')
+
+        for coalition_id, coalition in my_dict['coalition'].items():
+            for country_id, country in coalition['country'].items():
+                if not 'vehicle' in country:
+                    continue
+                for group_id, group in country['vehicle']['group'].items():
+                    if not 'y' in group:
+                        continue
+                    for spawnrange_name, my_polygon in ranges.items():
+                        if spawnrange_name in group['name']:
+                            group['name'] = group['name'].replace(spawnrange_name,'')
+                            del group['lateActivation']
+                            logging.info(f"removed {spawnrange_name} from {group['name']}")
+                            
+        self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
 
 
 

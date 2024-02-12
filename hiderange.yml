@@ -1,16 +1,74 @@
 ---
 
 terrain: NTTR
+prefix: 11S
 ranges:
-  "Leach Lake":
-    prefix: 11S
+  #"Ranges 61-63":
+  #  polygon:
+  #    - PB2527
+  #    - PB5027
+  #    - PA5233
+  #    - PA4433
+  #    - PA2746
+  #    - PA2964
+  #    - PA2996
+  #    - PB2507
+  "Ranges 61-62":
+    polygon:
+      - PB2527
+      - PB5027
+      - PA5164
+      - PA4064
+      - PA4068
+      - PA3468
+      - PA3464
+      - PA2964
+      - PA2896
+      - PB2507
+  "Range 63":
+    polygon:
+      - PA2964
+      - PA3464
+      - PA3468
+      - PA4068
+      - PA4064
+      - PA5164
+      - PA5233
+      - PA4433
+      - PA2746
+  "Ranges 64-65":
+    polygon:
+      - NA9495
+      - PA2895
+      - PA2964
+      - PA2752
+      - NA9552
+  "Range 66":
+  # AKA Leach Lake
     polygon:
       - NV05
       - NV55
       - NV51
       - NV01
-      #- MV9757
-      #- NV4857
-      #- NV0025
-      #- NV4623
+  "Range 74":
+    polygon:
+      - NB6056
+      - NB7172
+      - NB9872
+      - NB9847
+      - NB8847
+      - NB8824
+      - NB6024
+  "Ranges 75-76":
+    polygon:
+      - MB9155
+      - NB6056
+      - NB6037
+      - NB1430
+      - NB1424
+      - NB6024
+      - MB9343
+
+  
+
 
