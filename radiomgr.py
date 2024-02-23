@@ -41,7 +41,7 @@ class RadioMgr():
         self.logger = self.ml.logger
 
 
-    def export_radios(self):
+    def export_radios(self,filter=None):
 
         self.logger.debug("in export")
         #self.logger.debug(self.config)
@@ -58,6 +58,8 @@ class RadioMgr():
                     continue
                 for group_id, group in country['plane']['group'].items():
                     if not 'Radio' in group['units'][1]:
+                        continue
+                    if filter and not re.match(re.compile(filter), group['name']):
                         continue
                     dump_this = [
                         group['units'][1]['skill'], group['units'][1]['type']
@@ -77,14 +79,27 @@ class RadioMgr():
 
         # self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
 
-    def import_radios(self):
+    def import_radios(self,filter=None):
         self.logger.debug("in export")
         #self.logger.debug(self.config)
 
         airframes = {}
 
+        self.logger.info(self.conffile)
         with open(self.conffile) as f:
-            self.config = yaml.safe_load(f)
+            file_text = f.read()
+            try:
+                self.config = yaml.safe_load(file_text)
+            except yaml.scanner.ScannerError as e:
+                json_confg = json.loads(file_text)
+                # convert format
+                self.config = {}
+                for k,v in json_confg.items():
+                    radios = [rad['channels'] for rad in v['radios']]
+                    self.config[v]['type'] = radios
+                raise Exception('I give up implementing json format')
+            
+
 
         # Load mission and iterate over groups.        
         my_dict = self.ml.extract_filedict_from_miz('mission')
@@ -94,10 +109,14 @@ class RadioMgr():
                 #self.logger.debug(json.dumps(country,indent=2))
                 if not 'plane' in country:
                     continue
+ 
                 for group_id, group in country['plane']['group'].items():
-                    
                     if not 'Radio' in group['units'][1]:
                         continue
+                    if filter and not re.match(re.compile(filter), group['name']):
+                        continue
+                    
+
                     for unit_id, unit in group['units'].items():
                         if unit['skill'] == 'Client' and unit['type'] in self.config:
                             self.logger.debug(f"Setting {unit['type']} to {self.config[unit['type']]}")
@@ -115,6 +134,7 @@ if __name__ == '__main__':
     parser.add_argument('conffile',help='Configuration file')
     parser.add_argument('filename')
     parser.add_argument('--debug', '-d', action='store_true', help='Enable debug logging')
+    parser.add_argument('--filter', '-f', metavar='AIRFRAME', default=None, help='Filter for a specific airframe')
 
     args = parser.parse_args()
 
@@ -125,9 +145,9 @@ if __name__ == '__main__':
     
     rm = RadioMgr(args.conffile, args.filename, logger)
     if args.action == 'export':
-        rm.export_radios()
+        rm.export_radios(args.filter)
     elif args.action == 'import':
-        rm.import_radios()
+        rm.import_radios(args.filter)
     else:
         print("Unknown action")
         exit(1)
