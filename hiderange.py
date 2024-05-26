@@ -30,6 +30,11 @@ from mizlib import Mizlib
 
 class HideRange():
 
+    #spawnrange_name = f"!*{range}*! "
+    # Nested ranges arent working. -- fixed??
+    #spawnrange_name = f"!?GroundRanges?*{range}*! "
+    range_template = "!?GroundRanges?*%s*! "
+
     def __init__(self,conffile, mizfile,logger):
         with open(conffile) as f:
             self.config = yaml.safe_load(f)
@@ -79,9 +84,10 @@ class HideRange():
         for range, v in self.config['ranges'].items():
             self.logger.debug(range)
             my_polygon = self.get_polygon(self.config['prefix'],v['polygon'])
-            spawnrange_name = f"!*{range}*! "
-            # Nested ranges arent working.
+            #spawnrange_name = f"!*{range}*! "
+            # Nested ranges arent working. -- fixed??
             #spawnrange_name = f"!?GroundRanges?*{range}*! "
+            spawnrange_name = self.range_template % range
             self.logger.debug(my_polygon)
             ranges[spawnrange_name] = my_polygon
 
@@ -127,7 +133,8 @@ class HideRange():
         # remove the key from the name, and set the unit to not be late activated.
         ranges = {}
         for range, v in self.config['ranges'].items():
-            spawnrange_name = f"!*{range}*!"
+            #spawnrange_name = f"!*{range}*!"
+            spawnrange_name = self.range_template % range
             ranges[spawnrange_name] = ""
 
         my_dict = self.ml.extract_filedict_from_miz('mission')
