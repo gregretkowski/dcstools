@@ -35,7 +35,7 @@ class HideRange():
     #spawnrange_name = f"!?GroundRanges?*{range}*! "
     range_template = "!?GroundRanges?*%s*! "
 
-    def __init__(self,conffile, mizfile,logger):
+    def __init__(self,conffile, mizfile, dryrun, logger):
         with open(conffile) as f:
             self.config = yaml.safe_load(f)
 
@@ -43,6 +43,7 @@ class HideRange():
         self.mgrs = mgrs.MGRS()
         self.ml = Mizlib(mizfile,'',logger)
         self.logger = self.ml.logger
+        self.dryrun = dryrun
 
 
     def get_polygon(self,mgrs_prefix,mgrs_list):
@@ -84,12 +85,10 @@ class HideRange():
         for range, v in self.config['ranges'].items():
             self.logger.debug(range)
             my_polygon = self.get_polygon(self.config['prefix'],v['polygon'])
-            #spawnrange_name = f"!*{range}*! "
-            # Nested ranges arent working. -- fixed??
-            #spawnrange_name = f"!?GroundRanges?*{range}*! "
             spawnrange_name = self.range_template % range
             self.logger.debug(my_polygon)
-            ranges[spawnrange_name] = my_polygon
+            regexes = [re.compile(x) for x in v.get('exclude_patterns',[])]
+            ranges[spawnrange_name] = {'poly': my_polygon, 'regexes': regexes}
 
         # Create a set of polygons to modify stuff.. range_name, polygon.
         
@@ -108,10 +107,20 @@ class HideRange():
                         # 1. Group is a ground unit
                         # 2. Group is not late_activation
                         # 3. Group is within polygon
-                        for spawnrange_name, my_polygon in ranges.items():
+                        for spawnrange_name, dict_vals in ranges.items():
+                            my_polygon = dict_vals['poly']
+                            regexes = dict_vals['regexes']
                             #if my_polygon.contains(point) and not 'lateActivation' in group and not spawnrange_name in group['name']:
                             # Some stuff was late activation anyway. I dont know why, but I am gonna include them anyway
                             if my_polygon.contains(point) and not spawnrange_name in group['name']:
+                                if any(regex.match(group['name']) for regex in regexes):
+                                    self.logger.info(f"Excluded by regex {group['name']}")
+                                    continue
+                                #for reg in regexes:
+                                #    if reg.match(group['name']):
+                                #        self.logger.info(reg.pattern)
+                                #        self.logger.info(f"Excluded by regex {group['name']}")
+                                #        continue
                                 #ranges[spawnrange_name] = my_polygon
 
                                 self.logger.debug(f"Applying to {group['name']}")
@@ -125,8 +134,11 @@ class HideRange():
                             else:
                                 #self.logger.debug(f"Not in Poly {group['name']}")
                                 pass
-            
-        self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
+
+        if not self.dryrun:
+            self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
+        else:
+            logging.info("Dry run, not writing to file")
 
     def unhide(self):
         # read config, find all 'keys' find any ground unit with name of key,
@@ -152,7 +164,10 @@ class HideRange():
                             del group['lateActivation']
                             logging.info(f"removed {spawnrange_name} from {group['name']}")
 
-        self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
+        if not self.dryrun:
+            self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
+        else:
+            logging.info("Dry run, not writing to file")
 
     def deact(self):
 
@@ -173,7 +188,10 @@ class HideRange():
                         del group['lateActivation']
                         logging.info(f"removed 'ACTIVE_' from {group['name']}")
 
-        self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
+        if not self.dryrun:
+            self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
+        else:
+            logging.info("Dry run, not writing to file")
 
 if __name__ == '__main__':
 
@@ -183,6 +201,7 @@ if __name__ == '__main__':
     parser.add_argument('filename')
     parser.add_argument('--include-la', '-a', action='store_true', help='Include already late activated units in the hide action.')
     parser.add_argument('--debug', '-d', action='store_true', help='Enable debug logging')
+    parser.add_argument('--dry-run', '-n', action='store_true', help='Dry run (no changes to mission file')
 
     args = parser.parse_args()
 
@@ -191,7 +210,7 @@ if __name__ == '__main__':
     if args.debug:
         logger.setLevel(logging.DEBUG)
     
-    hr = HideRange(args.conffile, args.filename, logger)
+    hr = HideRange(args.conffile, args.filename, args.dry_run, logger)
     if args.action == 'hide':
         hr.hide()
     elif args.action == 'unhide':
