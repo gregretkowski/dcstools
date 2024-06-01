@@ -1,5 +1,8 @@
 DESCRIPTION='''
-This script will export all 'client' radio configs from a mission, or
+This script will:
+* export all 'client' radio configs from a mizfile into a YAML
+* import radio configs from a YAML into a mizfile
+
 will import. It handles multiple airframes.
 
 '''
@@ -11,6 +14,7 @@ import argparse
 #import mgrs
 #import requests
 #import dbm
+import os
 import re
 #import time
 import logging
@@ -47,6 +51,11 @@ class RadioMgr():
         #self.logger.debug(self.config)
 
         airframes = {}
+        if os.path.exists(self.conffile):
+            airframes_orig = yaml.safe_load(open(self.conffile))
+        else:
+            airframes_orig = {}
+        
 
         # Load mission and iterate over groups.        
         my_dict = self.ml.extract_filedict_from_miz('mission')
@@ -72,15 +81,17 @@ class RadioMgr():
                         airframes[ group['units'][1]['type'] ] = group['units'][1]["Radio"]
                         #raise Exception
 
+        new_airframe_count = len(airframes)
+        airframes = self.ml.deep_merge(airframes_orig, airframes)
         self.logger.debug(json.dumps(airframes, indent=2))
-        self.logger.info(f"Writing {len(airframes)} airframes to {self.conffile}")
+        self.logger.info(f"Writing {new_airframe_count} airframes to {self.conffile}")
         yaml.dump(airframes, open(self.conffile,'w'), default_flow_style=False)
                     
 
         # self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
 
     def import_radios(self,filter=None):
-        self.logger.debug("in export")
+        self.logger.debug("in import")
         #self.logger.debug(self.config)
 
         airframes = {}
@@ -126,11 +137,43 @@ class RadioMgr():
 
         self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
 
+    def list_radios(self,filter=None):
+        # List the airframes in the miz file with their groups,
+        # list the radios in the config file.
+        #pass
+        with open(self.conffile) as f:
+            #file_text = f.read()
+            #try:
+            yaml_conf = yaml.safe_load(f.read())
+        airframe_groups = {}
+        my_dict = self.ml.extract_filedict_from_miz('mission')
+
+        for coalition_id, coalition in my_dict['coalition'].items():
+            for country_id, country in coalition['country'].items():
+                #self.logger.debug(json.dumps(country,indent=2))
+                if not 'plane' in country:
+                    continue
+                for group_id, group in country['plane']['group'].items():
+                    if not 'Radio' in group['units'][1]:
+                        continue
+                    if filter and not re.match(re.compile(filter), group['name']):
+                        continue
+                    dump_this = [
+                        group['units'][1]['skill'], group['units'][1]['type']
+                    ]
+                    self.logger.debug(json.dumps(dump_this,indent=2))
+                    #self.logger.debug(json.dumps(group,indent=2))
+                    if group['units'][1]['skill'] == 'Client':
+                        #self.logger.debug(json.dumps(group['units'][1], indent=2))
+                        self.logger.debug(json.dumps(group['units'][1]["Radio"], indent=2))
+                        #airframes[ group['units'][1]['type'] ] = group['units'][1]["Radio"]
+                        airframe_groups.setdefault(group['units'][1]['type'],[]).append(group['name'])
+        print(yaml.dump({'from_yml': list(yaml_conf.keys()), 'from_miz': airframe_groups}))
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description=DESCRIPTION)
-    parser.add_argument('action',choices=['export','import'],help='Action to perform')
+    parser.add_argument('action',choices=['export','import','list'],help='Action to perform')
     parser.add_argument('conffile',help='Configuration file')
     parser.add_argument('filename')
     parser.add_argument('--debug', '-d', action='store_true', help='Enable debug logging')
@@ -148,6 +191,8 @@ if __name__ == '__main__':
         rm.export_radios(args.filter)
     elif args.action == 'import':
         rm.import_radios(args.filter)
+    elif args.action == 'list':
+        rm.list_radios(args.filter)
     else:
         print("Unknown action")
         exit(1)

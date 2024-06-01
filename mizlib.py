@@ -53,7 +53,8 @@ class Mizlib():
                 result[key] = self.deep_merge(result[key], value)
             else:
                 # Non-dictionary values or new keys
-                self.logger.debug("merge repleace key %s value %s with %s" % (key, result[key], value))
+                
+                self.logger.debug("merge repleace key %s value %s with %s" % (key, result.get('key',None), value))
                 #print(f"merge replace key {key} value {result[key]} with {value}")
                 result[key] = value
 
