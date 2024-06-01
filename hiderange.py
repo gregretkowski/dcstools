@@ -85,10 +85,15 @@ class HideRange():
         for range, v in self.config['ranges'].items():
             self.logger.debug(range)
             my_polygon = self.get_polygon(self.config['prefix'],v['polygon'])
-            spawnrange_name = self.range_template % range
             self.logger.debug(my_polygon)
             regexes = [re.compile(x) for x in v.get('exclude_patterns',[])]
-            ranges[spawnrange_name] = {'poly': my_polygon, 'regexes': regexes}
+            ranges[range] = {
+                'poly': my_polygon,
+                'regexes': regexes,
+                'enabled': v.get('enabled',True),
+                'dont_rename': v.get('dont_rename',False),
+                'special_groups': v.get('special_groups',[])
+            }
 
         # Create a set of polygons to modify stuff.. range_name, polygon.
         
@@ -107,12 +112,15 @@ class HideRange():
                         # 1. Group is a ground unit
                         # 2. Group is not late_activation
                         # 3. Group is within polygon
-                        for spawnrange_name, dict_vals in ranges.items():
+                        for range, dict_vals in ranges.items():
                             my_polygon = dict_vals['poly']
                             regexes = dict_vals['regexes']
                             #if my_polygon.contains(point) and not 'lateActivation' in group and not spawnrange_name in group['name']:
                             # Some stuff was late activation anyway. I dont know why, but I am gonna include them anyway
-                            if my_polygon.contains(point) and not spawnrange_name in group['name']:
+                            if my_polygon.contains(point):
+                                #self.logger.info(f"Group {group['name']} regexes {regexes}")
+                                if not dict_vals['enabled']:
+                                    continue
                                 if any(regex.match(group['name']) for regex in regexes):
                                     self.logger.info(f"Excluded by regex {group['name']}")
                                     continue
@@ -127,8 +135,19 @@ class HideRange():
                                 #group['hidden'] = True
                                 #group['visible'] = False
                                 group['lateActivation'] = True
-                                group['name'] = spawnrange_name+group['name']
-                                logging.info(f"added {group['name']}")
+                                if dict_vals['dont_rename']:
+                                    logging.info(f"added (no name change) {group['name']}")
+                                else:
+                                    ext = [x for x in dict_vals['special_groups']+[""] if group['name'].startswith(x)][0]
+                                    if ext != '':
+                                        ext = " " + ext
+                                        logging.info(f"Special group {group['name']}")
+                                    else:
+                                        pass
+                                    spawnrange_name = self.range_template % f"{range}{ext}"
+                                if not spawnrange_name in group['name']:
+                                    group['name'] = spawnrange_name+group['name']
+                                    logging.info(f"added {group['name']}")
                                 #self.logger.debug(group)
                                 self.logger.debug(json.dumps(group,indent=2))
                             else:
@@ -144,11 +163,19 @@ class HideRange():
         # read config, find all 'keys' find any ground unit with name of key,
         # remove the key from the name, and set the unit to not be late activated.
         ranges = {}
+
         for range, v in self.config['ranges'].items():
             #spawnrange_name = f"!*{range}*!"
             spawnrange_name = self.range_template % range
             ranges[spawnrange_name] = ""
+            if v.get('special_groups',[]):
+                for ext in v['special_groups']:
+                    #spawnrange_name = f"!*{range} {ext}*!"
+                    spawnrange_name = self.range_template % f"{range} {ext}"
+                    ranges[spawnrange_name] = ""
 
+        #print(ranges)
+        #raise Exception("Not implemented")
         my_dict = self.ml.extract_filedict_from_miz('mission')
 
         for coalition_id, coalition in my_dict['coalition'].items():
@@ -185,7 +212,7 @@ class HideRange():
 
                     if 'ACTIVE_' in group['name']:
                         group['name'] = group['name'].replace('ACTIVE_','')
-                        del group['lateActivation']
+                        group.pop('lateActivation',None) # del key
                         logging.info(f"removed 'ACTIVE_' from {group['name']}")
 
         if not self.dryrun:

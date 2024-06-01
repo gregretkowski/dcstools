@@ -14,6 +14,8 @@ ranges:
   #    - PA2996
   #    - PB2507
   "61-62":
+    # Can set 'enabled' false
+    enabled: true
     polygon:
       - PB2527
       - PB5027
@@ -25,6 +27,8 @@ ranges:
       - PA2964
       - PA2896
       - PB2507
+    exclude_patterns:
+      - ^Vehicle(s?)6208-.*$
   "63-65":
     polygon:
       - PA2964
@@ -41,6 +45,9 @@ ranges:
       - NA9495
       - PA2895
       - PA2964
+    exclude_patterns:
+      - R-63B Class A Range-3
+      - R-64C Class A Range-1
 
   #"Ranges 64-65":
   #  polygon:
@@ -57,6 +64,9 @@ ranges:
       - NV51
       - NV01
   "Range 74":
+    special_groups:
+      - "SAM"
+    # dont_rename: true
     polygon:
       - NB6056
       - NB7172
@@ -66,6 +76,9 @@ ranges:
       - NB8824
       - NB6024
   "Ranges 75-76":
+    special_groups:
+      - "SAM"
+    # dont_rename: true
     polygon:
       - MB9155
       - NB6056
