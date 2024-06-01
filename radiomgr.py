@@ -130,9 +130,16 @@ class RadioMgr():
 
                     for unit_id, unit in group['units'].items():
                         if unit['skill'] == 'Client' and unit['type'] in self.config:
+                            old_radio_1 = unit['Radio'][1]['channels'][1]
+                            new_radio_1 = self.config[unit['type']][1]['channels'][1]
                             self.logger.debug(f"Setting {unit['type']} to {self.config[unit['type']]}")
                             unit['Radio'] = self.config[unit['type']]
                             self.logger.info(f"Updated {unit['type']} {unit['name']}")
+                            #self.logger.info(f"{old_radio_1} -> {new_radio_1}")
+                            if 'frequency' in group.keys() and group['frequency'] != new_radio_1:
+                                self.logger.info(f"Updated Group frequency {group['frequency']} -> {new_radio_1}")
+                                group['frequency'] = new_radio_1
+                            #self.logger.info(f"{group['frequency']}")
                 
 
         self.ml.inject_filedict_into_miz(self.ml.miz_file,'mission', my_dict)
