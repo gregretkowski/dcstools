@@ -141,10 +141,11 @@ class RadioMgr():
         # List the airframes in the miz file with their groups,
         # list the radios in the config file.
         #pass
-        with open(self.conffile) as f:
-            #file_text = f.read()
-            #try:
-            yaml_conf = yaml.safe_load(f.read())
+        if os.path.exists(self.conffile):
+            yaml_conf = yaml.safe_load(open(self.conffile))
+        else:
+            yaml_conf = {}
+
         airframe_groups = {}
         my_dict = self.ml.extract_filedict_from_miz('mission')
 
