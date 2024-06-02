@@ -92,7 +92,9 @@ class HideRange():
                 'regexes': regexes,
                 'enabled': v.get('enabled',True),
                 'dont_rename': v.get('dont_rename',False),
-                'special_groups': v.get('special_groups',[])
+                'special_groups': v.get('special_groups',[]),
+                'template': v.get('template',self.range_template),
+                'hide_blue': v.get('hide_blue',True),
             }
 
         # Create a set of polygons to modify stuff.. range_name, polygon.
@@ -121,6 +123,10 @@ class HideRange():
                                 #self.logger.info(f"Group {group['name']} regexes {regexes}")
                                 if not dict_vals['enabled']:
                                     continue
+                                
+                                if (dict_vals['hide_blue'] == False) and coalition_id == 'blue':
+                                    self.logger.info(f"Excluded by coalition {group['name']}")
+                                    continue
                                 if any(regex.match(group['name']) for regex in regexes):
                                     self.logger.info(f"Excluded by regex {group['name']}")
                                     continue
@@ -137,15 +143,22 @@ class HideRange():
                                 group['lateActivation'] = True
                                 if dict_vals['dont_rename']:
                                     logging.info(f"added (no name change) {group['name']}")
+                                    spawnrange_name = ""
                                 else:
                                     ext = [x for x in dict_vals['special_groups']+[""] if group['name'].startswith(x)][0]
+                                    #exts = [x for x in dict_vals['special_groups'] if group['name'].startswith(x)]
                                     if ext != '':
                                         ext = " " + ext
                                         logging.info(f"Special group {group['name']}")
                                     else:
                                         pass
-                                    spawnrange_name = self.range_template % f"{range}{ext}"
-                                if not spawnrange_name in group['name']:
+                                    spawnrange_name = dict_vals['template'] % f"{range}{ext}"
+                                
+                                exts = [x for x in dict_vals['special_groups']]
+                                spawnrange_names = [(dict_vals['template'] % f"{range} {ext}") for ext in exts]+[dict_vals['template'] % f"{range}"]
+                                #print(spawnrange_names)
+                                if not any(x in group['name'] for x in spawnrange_names):
+                                #if not spawnrange_name in group['name']:
                                     group['name'] = spawnrange_name+group['name']
                                     logging.info(f"added {group['name']}")
                                 #self.logger.debug(group)
@@ -166,12 +179,14 @@ class HideRange():
 
         for range, v in self.config['ranges'].items():
             #spawnrange_name = f"!*{range}*!"
-            spawnrange_name = self.range_template % range
+            #spawnrange_name = self.range_template % range
+            spawnrange_name = v.get('template',self.range_template) % range
             ranges[spawnrange_name] = ""
             if v.get('special_groups',[]):
                 for ext in v['special_groups']:
                     #spawnrange_name = f"!*{range} {ext}*!"
-                    spawnrange_name = self.range_template % f"{range} {ext}"
+                    spawnrange_name = v.get('template',self.range_template) % f"{range} {ext}"
+                    #spawnrange_name = self.range_template % f"{range} {ext}"
                     ranges[spawnrange_name] = ""
 
         #print(ranges)
